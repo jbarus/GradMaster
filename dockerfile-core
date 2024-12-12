@@ -1,0 +1,27 @@
+# Core Dockerfile
+FROM eclipse-temurin:21-jdk-alpine
+
+# Instalacja Git, narzędzi build i narzędzia netcat (potrzebne do sprawdzania dostępności usług)
+RUN apk add --no-cache git maven bash netcat-openbsd
+
+# Klonowanie repozytorium
+WORKDIR /app
+RUN git clone https://github.com/jbarus/GradMasterCore.git core
+WORKDIR /app/core
+
+# Kopiowanie pliku .env do katalogu aplikacji
+COPY .env /app/core/.env
+
+# Budowanie aplikacji
+RUN mvn clean package -DskipTests
+
+# Kopiowanie pliku .env do katalogu, z którego uruchamiana jest aplikacja
+WORKDIR /app/core/target
+COPY .env /app/core/target/.env
+
+# Dodanie skryptu wait-for-it.sh do obrazu
+COPY scripts/wait-for-it.sh /wait-for-it.sh
+RUN chmod +x /wait-for-it.sh
+
+# Uruchamianie aplikacji z oczekiwaniem na RabbitMQ
+CMD ["/wait-for-it.sh", "rabbitmq:5672", "--", "java", "-jar", "GradMasterCore-1.0-SNAPSHOT.jar"]

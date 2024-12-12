@@ -1,0 +1,51 @@
+version: "3.9"
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672" # port RabbitMQ
+      - "15672:15672" # panel administracyjny RabbitMQ
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    networks:
+      app-network:
+        ipv4_address: 192.168.1.2
+
+  backend:
+    build:
+      context: .
+      dockerfile: dockerfile-backend
+    container_name: backend
+    depends_on:
+      - rabbitmq
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    networks:
+      app-network:
+        ipv4_address: 192.168.1.3
+
+  core:
+    build:
+      context: .
+      dockerfile: dockerfile-core
+    container_name: core
+    depends_on:
+      - rabbitmq
+    env_file:
+      - .env
+    networks:
+      app-network:
+        ipv4_address: 192.168.1.4
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
